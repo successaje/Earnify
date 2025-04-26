@@ -19,7 +19,14 @@ const Login = () => {
       setError('');
       
       // Call the login function from useAuth
-      await login();
+      const user = await login();
+      
+      // If user is null, it means they need to register
+      // The useAuth hook will handle the redirect to /register
+      if (user === null) {
+        toast.info('Please complete your registration to continue.');
+        return;
+      }
       
       // Show success message
       toast.success('Login successful!');

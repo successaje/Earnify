@@ -4,8 +4,11 @@ import { Principal } from '@dfinity/principal';
 import { idlFactory } from '../../../declarations/earnify_backend';
 import { Actor } from '@dfinity/agent';
 
-// Internet Identity URL - change this to your deployed II canister URL
-const II_URL = 'https://identity.ic0.app';
+// Determine network and identity provider
+const network = process.env.DFX_NETWORK || 'local';
+const II_URL = network === 'ic' 
+  ? 'https://identity.ic0.app'  // Mainnet
+  : 'http://be2us-64aaa-aaaaa-qaabq-cai.localhost:4943/'; // Local
 
 // Backend canister ID - replace with your deployed canister ID
 const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
@@ -17,20 +20,37 @@ export const createAgent = async () => {
     const identity = authClient.getIdentity();
     
     // Determine the host based on the environment
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isLocal = network === 'local';
     const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
     
-    console.log('Creating agent with host:', host, 'isLocal:', isLocal);
+    console.log('Creating agent with host:', host, 'network:', network);
     
     const agent = new HttpAgent({
       host,
-      identity
+      identity,
+      fetchRootKey: isLocal // Only fetch root key in development
     });
     
-    // Only fetch root key in development
     if (isLocal) {
       console.log('Fetching root key for development environment');
-      await agent.fetchRootKey();
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          await agent.fetchRootKey();
+          console.log('Root key fetched successfully');
+          break;
+        } catch (error) {
+          retryCount++;
+          console.error(`Error fetching root key (attempt ${retryCount}/${maxRetries}):`, error);
+          if (retryCount === maxRetries) {
+            throw error;
+          }
+          // Wait for 1 second before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     }
     
     return { agent, authClient, identity };
@@ -47,10 +67,13 @@ export const createActor = async () => {
     
     console.log('Creating actor for canister:', CANISTER_ID);
     
-    return Actor.createActor(idlFactory, {
+    const actor = Actor.createActor(idlFactory, {
       agent,
-      canisterId: CANISTER_ID,
+      canisterId: Principal.fromText(CANISTER_ID)
     });
+    
+    console.log('Actor created successfully');
+    return actor;
   } catch (error) {
     console.error('Error creating actor:', error);
     throw error;

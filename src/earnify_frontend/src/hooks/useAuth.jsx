@@ -69,8 +69,9 @@ export const AuthProvider = ({ children }) => {
         setUser(result.ok);
         return result.ok;
       } else {
-        // If user doesn't exist yet, return null
-        // This will allow the registration flow to continue
+        // If user doesn't exist yet, redirect to registration
+        console.log('User not found in backend, redirecting to registration');
+        navigate('/register');
         return null;
       }
     } catch (err) {
