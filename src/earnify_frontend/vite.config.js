@@ -3,12 +3,22 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import environment from 'vite-plugin-environment';
 import dotenv from 'dotenv';
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
 
 dotenv.config({ path: '../../.env' });
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
+  },
+  css: {
+    postcss: {
+      plugins: [
+        tailwindcss,
+        autoprefixer,
+      ],
+    },
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -30,6 +40,11 @@ export default defineConfig({
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
   ],
+  server: {
+    headers: {
+      "Content-Security-Policy": "connect-src 'self' https://ic0.app https://*.ic0.app"
+    }
+  },
   resolve: {
     alias: [
       {

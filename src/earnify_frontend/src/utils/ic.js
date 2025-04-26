@@ -1,7 +1,7 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { idlFactory } from '../declarations/earnify_backend';
+import { idlFactory } from '../../../declarations/earnify_backend';
 import { Actor } from '@dfinity/agent';
 
 // Internet Identity URL - change this to your deployed II canister URL
@@ -12,90 +12,154 @@ const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
 
 // Create an agent for making calls to the Internet Computer
 export const createAgent = async () => {
-  const authClient = await AuthClient.create();
-  const identity = authClient.getIdentity();
-  
-  const agent = new HttpAgent({
-    host: process.env.NODE_ENV === 'production' 
-      ? 'https://ic0.app' 
-      : 'http://localhost:4943',
-    identity
-  });
-  
-  // Only fetch root key in development
-  if (process.env.NODE_ENV !== 'production') {
-    await agent.fetchRootKey();
+  try {
+    const authClient = await AuthClient.create();
+    const identity = authClient.getIdentity();
+    
+    // Determine the host based on the environment
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
+    
+    console.log('Creating agent with host:', host, 'isLocal:', isLocal);
+    
+    const agent = new HttpAgent({
+      host,
+      identity
+    });
+    
+    // Only fetch root key in development
+    if (isLocal) {
+      console.log('Fetching root key for development environment');
+      await agent.fetchRootKey();
+    }
+    
+    return { agent, authClient, identity };
+  } catch (error) {
+    console.error('Error creating agent:', error);
+    throw error;
   }
-  
-  return { agent, authClient, identity };
 };
 
 // Create an actor for interacting with the backend canister
 export const createActor = async () => {
-  const { agent } = await createAgent();
-  
-  return Actor.createActor(idlFactory, {
-    agent,
-    canisterId: CANISTER_ID,
-  });
+  try {
+    const { agent } = await createAgent();
+    
+    console.log('Creating actor for canister:', CANISTER_ID);
+    
+    return Actor.createActor(idlFactory, {
+      agent,
+      canisterId: CANISTER_ID,
+    });
+  } catch (error) {
+    console.error('Error creating actor:', error);
+    throw error;
+  }
 };
 
 // Login with Internet Identity
 export const loginWithII = async () => {
-  const { authClient } = await createAgent();
-  
-  return new Promise((resolve, reject) => {
-    authClient.login({
-      identityProvider: II_URL,
-      onSuccess: () => resolve(authClient.getIdentity()),
-      onError: (err) => reject(err),
+  try {
+    const { authClient } = await createAgent();
+    
+    return new Promise((resolve, reject) => {
+      authClient.login({
+        identityProvider: II_URL,
+        onSuccess: () => {
+          console.log('Successfully logged in with Internet Identity');
+          resolve(authClient.getIdentity());
+        },
+        onError: (err) => {
+          console.error('Error logging in with Internet Identity:', err);
+          reject(err);
+        },
+        windowOpenerFeatures: "toolbar=0,location=0,menubar=0,width=500,height=500,left=100,top=100",
+      });
     });
-  });
+  } catch (error) {
+    console.error('Error in loginWithII:', error);
+    throw error;
+  }
 };
 
 // Logout from Internet Identity
 export const logoutFromII = async () => {
-  const { authClient } = await createAgent();
-  await authClient.logout();
+  try {
+    const { authClient } = await createAgent();
+    await authClient.logout();
+    console.log('Successfully logged out from Internet Identity');
+  } catch (error) {
+    console.error('Error logging out:', error);
+    throw error;
+  }
 };
 
 // Check if user is authenticated
 export const isAuthenticated = async () => {
-  const { authClient } = await createAgent();
-  return authClient.isAuthenticated();
+  try {
+    const { authClient } = await createAgent();
+    return authClient.isAuthenticated();
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
+  }
 };
 
 // Get the current user's principal
 export const getCurrentPrincipal = async () => {
-  const { identity } = await createAgent();
-  return identity.getPrincipal();
+  try {
+    const { identity } = await createAgent();
+    return identity.getPrincipal();
+  } catch (error) {
+    console.error('Error getting current principal:', error);
+    throw error;
+  }
 };
 
 // Get the current user's principal as a string
 export const getCurrentPrincipalText = async () => {
-  const principal = await getCurrentPrincipal();
-  return principal.toText();
+  try {
+    const principal = await getCurrentPrincipal();
+    return principal.toText();
+  } catch (error) {
+    console.error('Error getting principal text:', error);
+    throw error;
+  }
 };
 
 // Create a user in the backend
 export const createUser = async (userData) => {
-  const actor = await createActor();
-  const principal = await getCurrentPrincipal();
-  
-  return actor.createUser(
-    userData.username,
-    userData.email,
-    userData.bio,
-    userData.skills,
-    userData.role,
-    userData.preferences
-  );
+  try {
+    const actor = await createActor();
+    const principal = await getCurrentPrincipal();
+    
+    console.log('Creating user with data:', { ...userData, principal: principal.toText() });
+    const result = await actor.createUser(
+      userData.username,
+      userData.email,
+      userData.bio,
+      userData.skills,
+      userData.role,
+      userData.preferences
+    );
+    
+    console.log('User creation result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    throw error;
+  }
 };
 
 // Get user data from the backend
 export const getUser = async (principal) => {
-  const actor = await createActor();
-  return actor.getUser(principal);
+  try {
+    const actor = await createActor();
+    return actor.getUser(principal);
+  } catch (error) {
+    console.error('Error getting user:', error);
+    throw error;
+  }
 };
 
 // Update user data in the backend

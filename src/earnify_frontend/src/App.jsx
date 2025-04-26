@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth.jsx';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Jobs from './pages/Jobs';
@@ -16,10 +16,16 @@ const queryClient = new QueryClient();
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
   }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
   return children;
 };
 
