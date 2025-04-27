@@ -372,7 +372,7 @@ export const createUser = async (userData) => {
     const result = await actor.createUser(
       userData.username,
       userData.email,
-      userData.bio || '',
+      wrapOptText(userData.bio),
       userData.skills || [],
       userData.role || 'user',
       {
