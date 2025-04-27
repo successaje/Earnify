@@ -8,7 +8,8 @@ import {
   getCurrentPrincipal,
   createUser,
   getUser,
-  updateUser
+  updateUser,
+  initialize
 } from '../utils/ic';
 
 // Create a context for authentication
@@ -25,6 +26,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Initialize the auth client, agent, and actor
+        await initialize();
+        
         const authenticated = await isAuthenticated();
         if (authenticated) {
           const principal = await getCurrentPrincipal();
@@ -32,7 +36,7 @@ export const AuthProvider = ({ children }) => {
           // Get user data from backend
           const result = await getUser(principal);
           
-          if (result.ok) {
+          if ('ok' in result) {
             setUser(result.ok);
           } else {
             console.error('Failed to get user data:', result.err);
@@ -56,6 +60,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
+      // Initialize the auth client, agent, and actor
+      await initialize();
+      
       // Start the Internet Identity login flow
       await loginWithII();
       
@@ -65,12 +72,13 @@ export const AuthProvider = ({ children }) => {
       // Get user data from backend
       const result = await getUser(principal);
       
-      if (result.ok) {
+      if ('ok' in result) {
         setUser(result.ok);
         return result.ok;
       } else {
-        // If user doesn't exist yet, redirect to registration
+        // If user doesn't exist yet, store the principal and redirect to registration
         console.log('User not found in backend, redirecting to registration');
+        localStorage.setItem('pendingRegistrationPrincipal', principal.toText());
         navigate('/register');
         return null;
       }
@@ -89,19 +97,57 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // First authenticate with Internet Identity
-      const existingUser = await login();
+      // Initialize the auth client, agent, and actor
+      await initialize();
       
-      // If user already exists, return it
-      if (existingUser) {
-        return existingUser;
+      // Get the current principal
+      const principal = await getCurrentPrincipal();
+      const principalText = principal.toText();
+      
+      // Check if the principal is anonymous
+      if (principalText === '2vxsx-fae') {
+        throw new Error('Authentication failed. Please login with Internet Identity before registering.');
       }
       
-      // Then register the user in the backend
-      const result = await createUser(userData);
+      console.log('User authenticated with principal:', principalText);
       
-      if (result.ok) {
+      // Check if user already exists
+      const userResult = await getUser(principal);
+      
+      if ('ok' in userResult) {
+        // User already exists, return it
+        setUser(userResult.ok);
+        localStorage.removeItem('pendingRegistrationPrincipal');
+        return userResult.ok;
+      }
+      
+      // Initialize user data with default values
+      const completeUserData = {
+        ...userData,
+        socialLinks: userData.socialLinks || {
+          linkedin: '',
+          twitter: '',
+          github: '',
+          portfolio: ''
+        },
+        proofOfWork: userData.proofOfWork || [],
+        preferences: {
+          preferredLocations: userData.preferences?.preferredLocations || [],
+          preferredJobTypes: userData.preferences?.preferredJobTypes || [],
+          preferredCategories: userData.preferences?.preferredCategories || [],
+          salaryExpectation: userData.preferences?.salaryExpectation || 0.0,
+          remotePreference: userData.preferences?.remotePreference || false,
+          experienceLevel: userData.preferences?.experienceLevel || 'entry'
+        }
+      };
+      
+      // Then register the user in the backend with complete data
+      const result = await createUser(completeUserData);
+      
+      if ('ok' in result) {
         setUser(result.ok);
+        // Clear the pending registration principal
+        localStorage.removeItem('pendingRegistrationPrincipal');
         return result.ok;
       } else {
         throw new Error(result.err);
@@ -133,10 +179,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
+      // Initialize the auth client, agent, and actor
+      await initialize();
+      
       // Update user in backend
       const result = await updateUser(profileData);
       
-      if (result.ok) {
+      if ('ok' in result) {
         setUser(result.ok);
         return result.ok;
       } else {
@@ -151,6 +200,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Initialize the auth client, agent, and actor
+      await initialize();
+      
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        setUser(null);
+        return null;
+      }
+      
+      const principal = await getCurrentPrincipal();
+      const result = await getUser(principal);
+      
+      if ('ok' in result) {
+        setUser(result.ok);
+        return result.ok;
+      } else {
+        console.error('Failed to get user data:', result.err);
+        setError('Failed to get user data');
+        return null;
+      }
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+      setError('Failed to refresh user data');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Value object that will be passed to consumers of this context
   const value = {
     user,
@@ -159,7 +243,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updateProfile
+    updateProfile,
+    refreshUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

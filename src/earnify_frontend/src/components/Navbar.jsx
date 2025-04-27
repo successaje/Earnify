@@ -25,6 +25,9 @@ const Navbar = () => {
             <Link to="/jobs" className="text-gray-700 hover:text-indigo-600">
               Jobs
             </Link>
+            <Link to="/bounties" className="text-gray-700 hover:text-indigo-600">
+              Bounties
+            </Link>
             {user ? (
               <>
                 <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600">
@@ -118,6 +121,12 @@ const Navbar = () => {
                 className="block px-3 py-2 text-gray-700 hover:text-indigo-600"
               >
                 Jobs
+              </Link>
+              <Link
+                to="/bounties"
+                className="block px-3 py-2 text-gray-700 hover:text-indigo-600"
+              >
+                Bounties
               </Link>
               {user ? (
                 <>

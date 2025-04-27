@@ -10,8 +10,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the redirect path from location state or default to dashboard
-  const from = location.state?.from?.pathname || '/dashboard';
+  // Get the redirect path from location state or default to home
+  const from = location.state?.from?.pathname || '/';
 
   const handleLogin = async () => {
     try {
