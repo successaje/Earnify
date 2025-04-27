@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { toast } from 'react-hot-toast';
@@ -28,8 +28,29 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isAuthenticatedWithII, setIsAuthenticatedWithII] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  // Check if user is authenticated with Internet Identity on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const auth = await isAuthenticated();
+        setIsAuthenticatedWithII(auth);
+        
+        if (!auth) {
+          toast.error('Please sign in with Internet Identity first');
+          navigate('/login');
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        toast.error('Authentication check failed');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -111,78 +132,38 @@ const Register = () => {
     }
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setLoading(true);
-  //   setError('');
-
-  //   try {
-  //     // Convert skills string to array
-  //     const skillsArray = formData.skills.split(',').map(skill => skill.trim());
-      
-  //     // Prepare user data
-  //     const userData = {
-  //       ...formData,
-  //       skills: skillsArray,
-  //       preferences: {
-  //         ...formData.preferences,
-  //         preferredLocations: formData.preferences.preferredLocations.split(',').map(loc => loc.trim()),
-  //         preferredJobTypes: formData.preferences.preferredJobTypes.split(',').map(type => type.trim()),
-  //         preferredCategories: formData.preferences.preferredCategories.split(',').map(cat => cat.trim()),
-  //         salaryExpectation: parseFloat(formData.preferences.salaryExpectation) || 0.0
-  //       }
-  //     };
-
-  //     // First ensure user is authenticated with Internet Identity
-  //     const isUserAuthenticated = await isAuthenticated();
-      
-  //     if (!isUserAuthenticated) {
-  //       toast('Please login with Internet Identity to continue registration');
-  //       // Redirect to login page
-  //       navigate('/login');
-  //       return;
-  //     }
-      
-  //     // Get the current principal to verify it's not anonymous
-  //     const principal = await getCurrentPrincipal();
-  //     const principalText = principal.toText();
-      
-  //     if (principalText === '2vxsx-fae') {
-  //       toast.error('Authentication required. Please login with Internet Identity before registering.');
-  //       // Redirect to login page
-  //       navigate('/login');
-  //       return;
-  //     }
-      
-  //     // Now proceed with registration
-  //     const result = await register(userData);
-      
-  //     if (result) {
-  //       toast.success('Registration successful!');
-  //       navigate('/');
-  //     } else {
-  //       setError('Registration failed. Please try again.');
-  //     }
-  //   } catch (err) {
-  //     console.error('Registration error:', err);
-  //     setError(err.message || 'Registration failed. Please try again.');
-  //     toast.error(err.message || 'Registration failed. Please try again.');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  // If not authenticated with Internet Identity, show a message
+  if (!isAuthenticatedWithII) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Authentication Required
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Please sign in with Internet Identity to continue registration.
+          </p>
+          <div className="mt-6">
+            <Link
+              to="/login"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Sign in with Internet Identity
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Create your account
+          Complete Your Profile
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            Sign in
-          </Link>
+          You've successfully authenticated with Internet Identity. Please complete your profile to continue.
         </p>
       </div>
 
@@ -311,7 +292,7 @@ const Register = () => {
                   value={formData.preferences.preferredJobTypes}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="e.g., Full-time, Contract, Part-time"
+                  placeholder="e.g., Full-time, Contract, Remote"
                 />
               </div>
             </div>
@@ -328,23 +309,25 @@ const Register = () => {
                   value={formData.preferences.preferredCategories}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="e.g., Software Development, Design, Marketing"
+                  placeholder="e.g., Web Development, Design, Marketing"
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="preferences.salaryExpectation" className="block text-sm font-medium text-gray-700">
-                Salary Expectation
+                Salary Expectation (USD)
               </label>
               <div className="mt-1">
                 <input
                   id="preferences.salaryExpectation"
                   name="preferences.salaryExpectation"
                   type="number"
+                  min="0"
                   value={formData.preferences.salaryExpectation}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="e.g., 75000"
                 />
               </div>
             </div>
@@ -358,7 +341,7 @@ const Register = () => {
                 onChange={handleChange}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="preferences.remotePreference" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="preferences.remotePreference" className="ml-2 block text-sm text-gray-700">
                 Open to remote work
               </label>
             </div>
@@ -465,7 +448,7 @@ const Register = () => {
                   loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
                 } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? 'Creating Account...' : 'Complete Registration'}
               </button>
             </div>
           </form>

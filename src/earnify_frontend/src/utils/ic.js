@@ -369,6 +369,7 @@ export const createUser = async (userData) => {
       powType: pow.powType || "OTHER"
     }));
     
+    console.log('Calling backend createUser with formatted data');
     const result = await actor.createUser(
       userData.username,
       userData.email,
@@ -387,14 +388,26 @@ export const createUser = async (userData) => {
       proofOfWork
     );
 
+    console.log('Backend createUser response:', result);
+
     if ('ok' in result) {
-      return result.ok;
+      console.log('User created successfully:', result.ok);
+      return { ok: result.ok };
+    } else if ('err' in result) {
+      console.error('Backend error creating user:', result.err);
+      throw new Error(typeof result.err === 'string' ? result.err : 'Failed to create user');
     } else {
-      throw new Error(result.err);
+      console.error('Unexpected response format:', result);
+      throw new Error('Unexpected response from backend');
     }
   } catch (error) {
     console.error('Error creating user:', error);
-    throw error;
+    // If the error is already an Error object, throw it as is
+    if (error instanceof Error) {
+      throw error;
+    }
+    // Otherwise, wrap it in an Error object
+    throw new Error(typeof error === 'string' ? error : 'Failed to create user');
   }
 };
 

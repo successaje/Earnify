@@ -141,20 +141,26 @@ export const AuthProvider = ({ children }) => {
         }
       };
       
+      console.log('Attempting to create user with data:', completeUserData);
+      
       // Then register the user in the backend with complete data
       const result = await createUser(completeUserData);
       
-      if ('ok' in result) {
+      console.log('Create user result:', result);
+      
+      if (result && 'ok' in result) {
+        console.log('User created successfully, setting user state');
         setUser(result.ok);
         // Clear the pending registration principal
         localStorage.removeItem('pendingRegistrationPrincipal');
         return result.ok;
       } else {
-        throw new Error(result.err);
+        console.error('Unexpected result format:', result);
+        throw new Error('Failed to create user: Unexpected response format');
       }
     } catch (err) {
       console.error('Registration failed:', err);
-      setError('Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
       throw err;
     } finally {
       setLoading(false);

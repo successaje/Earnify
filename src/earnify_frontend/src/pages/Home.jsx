@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getAllJobs, getAllBounties } from '../utils/ic';
-import Leaderboard from '../components/Leaderboard';
+import RecentEarners from '../components/RecentEarners';
 
 function Home() {
   const { user } = useAuth();
@@ -78,7 +78,7 @@ function Home() {
         </div>
 
         <div className="lg:col-span-1">
-          <Leaderboard />
+          <RecentEarners />
         </div>
       </div>
 
@@ -338,10 +338,10 @@ function Home() {
                 </Link>
               ) : (
                 <Link
-                  to="/register"
+                  to="/login"
                   className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50"
                 >
-                  Sign Up Now
+                  Sign In Now
                 </Link>
               )}
             </div>
