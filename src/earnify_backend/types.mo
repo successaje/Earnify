@@ -1,10 +1,26 @@
 module {
 
+    public type SocialLinks = {
+        linkedin: ?Text;
+        twitter: ?Text;
+        github: ?Text;
+        portfolio: ?Text;
+    };
+
+    public type ProofOfWork = {
+        id: Text;
+        title: Text;
+        description: Text;
+        url: ?Text;
+        date: Int;
+        powType: Text; // "blog", "project", "article", etc.
+    };
+
     public type UserProfile = {
         principal: Principal;
         username: Text;
         email: Text;
-        bio: Text;
+        bio: ?Text;
         skills: [Text];
         experience: [Experience];
         education: [Education];
@@ -13,6 +29,12 @@ module {
         role: Text;
         verified: Bool;
         preferences: JobPreferences;
+        socialLinks: ?SocialLinks;
+        proofOfWork: [ProofOfWork];
+        totalEarnings: Float;
+        completedJobs: Nat;
+        completedBounties: Nat;
+        reputation: Float;
     };
 
     public type JobPreferences = {
@@ -110,6 +132,46 @@ module {
         applications: Nat;
         uniqueApplicants: Nat;
         averageApplicationTime: Int;
+        conversionRate: Float;
+    };
+
+    public type Bounty = {
+        id: Text;
+        title: Text;
+        description: Text;
+        reward: Float;
+        currency: Text;  // e.g., "ICP", "USD"
+        deadline: Int;
+        status: Text;  // "open", "in-progress", "completed", "cancelled"
+        category: Text;
+        skills: [Text];
+        postedBy: Principal;
+        postedAt: Int;
+        submissions: [BountySubmission];
+        requirements: [Text];
+        tags: [Text];
+        views: Nat;
+        submissionCount: Nat;
+    };
+
+    public type BountySubmission = {
+        id: Text;
+        bountyId: Text;
+        submitter: Principal;
+        description: Text;
+        status: Text;  // "pending", "approved", "rejected"
+        submittedAt: Int;
+        updatedAt: Int;
+        attachments: [Text];  // URLs or hashes of attached files
+        feedback: ?Text;
+    };
+
+    public type BountyAnalytics = {
+        bountyId: Text;
+        views: Nat;
+        submissions: Nat;
+        uniqueSubmitters: Nat;
+        averageSubmissionTime: Int;
         conversionRate: Float;
     };
 }

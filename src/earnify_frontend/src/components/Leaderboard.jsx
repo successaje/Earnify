@@ -74,8 +74,11 @@ const Leaderboard = () => {
   // }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold mb-6">Top Earners</h2>
+    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="px-4 py-5 sm:px-6">
+        <h3 className="text-lg leading-6 font-medium text-gray-900">Top Earners</h3>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500">Users ranked by total earnings</p>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -84,7 +87,7 @@ const Leaderboard = () => {
                 Rank
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
+                Username
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Total Earnings
@@ -99,7 +102,7 @@ const Leaderboard = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user, index) => (
-              <tr key={user.principal} className={index < 3 ? 'bg-yellow-50' : ''}>
+              <tr key={typeof user.principal === 'string' ? user.principal : user.principal.toText()} className={index < 3 ? 'bg-yellow-50' : ''}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {index + 1}
                 </td>

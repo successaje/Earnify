@@ -13,6 +13,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import LeaderboardPage from './pages/LeaderboardPage';
+import FAQ from './pages/FAQ';
+import Support from './pages/Support';
 import PrivateRoute from './components/PrivateRoute';
 import NotFound from './pages/NotFound';
 
@@ -48,6 +50,8 @@ function App() {
           </PrivateRoute>
         } />
         <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+        <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+        <Route path="/support" element={<Layout><Support /></Layout>} />
         <Route path="*" element={<Layout><NotFound /></Layout>} />
       </Routes>
     </div>

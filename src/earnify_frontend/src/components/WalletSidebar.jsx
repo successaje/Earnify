@@ -1,60 +1,99 @@
-import { useState, useEffect } from 'react';
-import { getCurrentPrincipal } from '../utils/ic';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+// Import token logos
+import icpLogo from '../assets/icp.png';
+import ckBTCLogo from '../assets/ckBTC.png';
+import ckETHLogo from '../assets/ckETH.png';
+import ckUSDLogo from '../assets/ckUSDC.png';
 
 const WalletSidebar = ({ isOpen, onClose, user }) => {
-  const [principal, setPrincipal] = useState('');
-  const [balance, setBalance] = useState('0.00');
+  const [balances, setBalances] = useState({
+    icp: '0.00',
+    ckusd: '0.00',
+    ckbtc: '0.00',
+    cketh: '0.00'
+  });
   const [activities, setActivities] = useState([]);
   const [assets, setAssets] = useState([]);
-  const [leaderboardData, setLeaderboardData] = useState([]);
 
+  // Mock data for demonstration
   useEffect(() => {
-    const fetchWalletData = async () => {
-      try {
-        // Get the current principal
-        const currentPrincipal = await getCurrentPrincipal();
-        setPrincipal(currentPrincipal.toString());
-        
-        // In a real app, you would fetch balance, activities, and assets from your backend
-        // For now, we'll use placeholder data
-        setBalance('0.00');
-        setActivities([
-          { id: 1, type: 'reward', amount: '0.5', date: '2023-06-15', description: 'Bounty completion reward' },
-          { id: 2, type: 'withdrawal', amount: '1.0', date: '2023-06-10', description: 'Withdrawal to external wallet' },
-        ]);
-        setAssets([
-          { id: 1, name: 'ICP', amount: '0.00', value: '$0.00' },
-          { id: 2, name: 'Earnify Token', amount: '0', value: '$0.00' },
-        ]);
-        
-        // Generate placeholder leaderboard data
-        const placeholderLeaderboard = [
-          { id: 1, name: 'Alice', principal: '2vxsx-fae...', earnings: '125.50', rank: 1 },
-          { id: 2, name: 'Bob', principal: '3dxzt-abc...', earnings: '98.75', rank: 2 },
-          { id: 3, name: 'Charlie', principal: '4dxzt-def...', earnings: '87.25', rank: 3 },
-          { id: 4, name: 'Diana', principal: '5dxzt-ghi...', earnings: '76.50', rank: 4 },
-          { id: 5, name: 'Ethan', principal: '6dxzt-jkl...', earnings: '65.25', rank: 5 },
-          { id: 6, name: 'Fiona', principal: '7dxzt-mno...', earnings: '54.75', rank: 6 },
-          { id: 7, name: 'George', principal: '8dxzt-pqr...', earnings: '43.50', rank: 7 },
-          { id: 8, name: 'Hannah', principal: '9dxzt-stu...', earnings: '32.25', rank: 8 },
-          { id: 9, name: 'Ian', principal: '0dxzt-vwx...', earnings: '21.00', rank: 9 },
-          { id: 10, name: 'Julia', principal: '1dxzt-yza...', earnings: '10.50', rank: 10 },
-        ];
-        setLeaderboardData(placeholderLeaderboard);
-      } catch (error) {
-        console.error('Error fetching wallet data:', error);
+    if (isOpen) {
+      // In a real app, you would fetch this data from your backend
+      setBalances({
+        icp: '1,234.56',
+        ckusd: '5,678.90',
+        ckbtc: '0.5',
+        cketh: '2.5'
+      });
+      
+      setActivities([
+        { id: 1, type: 'received', amount: '500.00', token: 'ICP', from: '0x1234...5678', date: '2023-05-01' },
+        { id: 2, type: 'sent', amount: '100.00', token: 'ICP', to: '0x8765...4321', date: '2023-05-02' },
+        { id: 3, type: 'received', amount: '750.00', token: 'ckUSD', from: '0x2468...1357', date: '2023-05-03' },
+        { id: 4, type: 'earned', amount: '0.05', token: 'ckBTC', from: 'Job #1234', date: '2023-05-04' },
+        { id: 5, type: 'earned', amount: '1.25', token: 'ckETH', from: 'Bounty #5678', date: '2023-05-05' },
+      ]);
+      
+      setAssets([
+        { id: 1, name: 'ICP', symbol: 'ICP', balance: '1,234.56', value: '$12,345.60', logo: icpLogo },
+        { id: 2, name: 'CKBTC', symbol: 'ckBTC', balance: '0.5', value: '$15,000.00', logo: ckBTCLogo },
+        { id: 3, name: 'CKETH', symbol: 'ckETH', balance: '2.5', value: '$5,000.00', logo: ckETHLogo },
+        { id: 4, name: 'CKUSD', symbol: 'ckUSD', balance: '5,678.90', value: '$5,678.90', logo: ckUSDLogo },
+      ]);
+    }
+  }, [isOpen]);
+
+  // Close sidebar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.wallet-sidebar')) {
+        onClose();
       }
     };
 
-    if (isOpen && user) {
-      fetchWalletData();
-    }
-  }, [isOpen, user]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
-  // Format date to a more readable format
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // Prevent body scrolling when sidebar is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Convert Principal to string if it's an object
+  const getPrincipalText = () => {
+    if (!user?.principal) return 'Not connected';
+    
+    // If principal is already a string, return it
+    if (typeof user.principal === 'string') return user.principal;
+    
+    // If principal is an object with toText method, call it
+    if (user.principal && typeof user.principal.toText === 'function') {
+      return user.principal.toText();
+    }
+    
+    // If principal is an object with _arr property (Principal object)
+    if (user.principal && user.principal._arr) {
+      try {
+        return user.principal.toText();
+      } catch (e) {
+        console.error('Error converting principal to text:', e);
+        return 'Invalid principal';
+      }
+    }
+    
+    // Fallback
+    return 'Unknown principal format';
   };
 
   return (
@@ -66,126 +105,95 @@ const WalletSidebar = ({ isOpen, onClose, user }) => {
           onClick={onClose}
         />
       )}
-      
+
       {/* Sidebar */}
       <div 
-        className={`fixed top-0 right-0 h-full w-1/3 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-1/3 max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out wallet-sidebar ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b">
-            <h2 className="text-xl font-bold text-gray-800">Your Wallet</h2>
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-800">Wallet</h2>
             <button 
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-          
+
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {/* Principal ID */}
+            {/* Wallet Info */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Principal ID</h3>
-              <div className="bg-gray-50 p-3 rounded-md">
-                <p className="text-sm font-mono break-all">{principal}</p>
-              </div>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">Wallet Name</h3>
+              <p className="text-lg font-semibold text-gray-800">My Earnify Wallet</p>
+              
+              <h3 className="text-sm font-medium text-gray-500 mt-4 mb-1">Principal ID</h3>
+              <p className="text-sm font-mono text-gray-800 break-all">
+                {getPrincipalText()}
+              </p>
+              
+              <h3 className="text-sm font-medium text-gray-500 mt-4 mb-1">Total Balance</h3>
+              <p className="text-2xl font-bold text-indigo-600">$38,024.50</p>
             </div>
-            
-            {/* Balance */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Total Balance</h3>
-              <div className="bg-indigo-50 p-4 rounded-md">
-                <p className="text-2xl font-bold text-indigo-700">{balance} ICP</p>
-                <p className="text-sm text-gray-500">≈ ${(parseFloat(balance) * 5).toFixed(2)} USD</p>
-              </div>
-            </div>
-            
+
             {/* Assets */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Assets</h3>
-              <div className="space-y-2">
-                {assets.map(asset => (
-                  <div key={asset.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                    <div>
-                      <p className="font-medium">{asset.name}</p>
-                      <p className="text-sm text-gray-500">{asset.amount}</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Assets</h3>
+              <div className="space-y-3">
+                {assets.map((asset) => (
+                  <div key={asset.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="mr-3">
+                        <img src={asset.logo} alt={asset.name} className="h-8 w-8 object-contain" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{asset.name}</p>
+                        <p className="text-sm text-gray-500">{asset.balance}</p>
+                      </div>
                     </div>
-                    <p className="font-medium">{asset.value}</p>
+                    <p className="font-semibold text-gray-800">{asset.value}</p>
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Leaderboard */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Top Earners</h3>
-              <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 p-3 bg-gray-50 text-xs font-medium text-gray-500">
-                  <div className="col-span-1">#</div>
-                  <div className="col-span-4">Name</div>
-                  <div className="col-span-4">Principal</div>
-                  <div className="col-span-3 text-right">Earned</div>
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {leaderboardData.map((entry) => (
-                    <div key={entry.id} className="grid grid-cols-12 gap-2 p-3 border-t border-gray-100 hover:bg-gray-50">
-                      <div className="col-span-1 flex items-center">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${
-                          entry.rank <= 3 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {entry.rank}
-                        </span>
-                      </div>
-                      <div className="col-span-4 flex items-center font-medium">{entry.name}</div>
-                      <div className="col-span-4 flex items-center text-xs text-gray-500 font-mono">{entry.principal}</div>
-                      <div className="col-span-3 flex items-center justify-end font-medium text-green-600">
-                        {entry.earnings} ICP
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
+
             {/* Recent Activity */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Recent Activity</h3>
-              <div className="space-y-2">
-                {activities.map(activity => (
-                  <div key={activity.id} className="p-3 bg-gray-50 rounded-md">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{activity.description}</p>
-                        <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
-                      </div>
-                      <p className={`font-medium ${activity.type === 'reward' ? 'text-green-600' : 'text-red-600'}`}>
-                        {activity.type === 'reward' ? '+' : '-'}{activity.amount} ICP
-                      </p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Recent Activity</h3>
+              <div className="space-y-3">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-sm font-medium ${
+                        activity.type === 'received' || activity.type === 'earned' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {activity.type === 'received' ? 'Received' : activity.type === 'earned' ? 'Earned' : 'Sent'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{activity.amount} {activity.token}</span>
                     </div>
+                    <div className="text-xs text-gray-500">
+                      {activity.type === 'earned' ? `From: ${activity.from}` : 
+                       activity.type === 'received' ? `From: ${activity.from}` : `To: ${activity.to}`}
+                    </div>
+                    <div className="text-xs text-gray-500">{activity.date}</div>
                   </div>
                 ))}
               </div>
             </div>
-            
+
             {/* Disclaimer */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-md">
-              <p className="text-sm text-blue-700">
-                You will receive payments in this wallet each time you win. Learn more about what you can do with your rewards.
+            <div className="mt-auto p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500">
+                By using this wallet, you acknowledge that you are responsible for the security of your funds. 
+                Earnify is not responsible for any loss of funds due to unauthorized access or other security issues.
               </p>
             </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="p-4 border-t">
-            <button className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors">
-              Withdraw Funds
-            </button>
           </div>
         </div>
       </div>

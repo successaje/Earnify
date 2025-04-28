@@ -3,12 +3,36 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getAllJobs, getAllBounties } from '../utils/ic';
 import RecentEarners from '../components/RecentEarners';
+import poweredByICPLogo from '../assets/powered-by-icp.png';
 
 function Home() {
   const { user } = useAuth();
   const [recentJobs, setRecentJobs] = useState([]);
   const [recentBounties, setRecentBounties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Placeholder data for verified events
+  const verifiedEvents = [
+    { id: 1, title: 'ICP Global Summit 2023', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80', date: 'October 15-17, 2023' },
+    { id: 2, title: 'Earnify Launch Event', image: 'https://images.unsplash.com/photo-1511795409834-432f7b1728d2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80', date: 'September 5, 2023' },
+    { id: 3, title: 'Web3 Developer Conference', image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80', date: 'August 20, 2023' },
+  ];
+
+  // Placeholder data for grants
+  const grants = [
+    { id: 1, title: 'Ecosystem Development Grant', amount: '50,000 ICP', deadline: 'December 31, 2023', applicants: 24 },
+    { id: 2, title: 'Innovation in DeFi', amount: '30,000 ICP', deadline: 'November 15, 2023', applicants: 18 },
+    { id: 3, title: 'Community Building Initiative', amount: '20,000 ICP', deadline: 'October 30, 2023', applicants: 12 },
+  ];
+
+  // Platform stats
+  const platformStats = [
+    { id: 1, label: 'Active Users', value: '12,500+' },
+    { id: 2, label: 'Jobs Posted', value: '3,200+' },
+    { id: 3, label: 'Bounties Completed', value: '1,800+' },
+    { id: 4, label: 'Total Earnings', value: '450,000+ ICP' },
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,6 +58,14 @@ function Home() {
     fetchData();
   }, []);
 
+  // Auto-rotate slides
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % verifiedEvents.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     // Convert BigInt to number if needed
@@ -43,45 +75,146 @@ function Home() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to Earnify
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <div className="relative bg-indigo-700 overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
+            alt="Background"
+            className="w-full h-full object-cover opacity-20"
+          />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">
+              {user ? `Welcome back, ${user.username || 'User'}!` : 'Welcome to Earnify'}
             </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Find your next opportunity or hire talented professionals
+            <p className="text-xl md:text-2xl text-indigo-100 max-w-3xl mx-auto mb-8">
+              {user 
+                ? "Your next opportunity awaits. Browse jobs, complete bounties, and earn rewards."
+                : "Find your next opportunity or hire talented professionals on the Internet Computer"}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link
                 to="/jobs"
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50"
               >
                 Browse Jobs
               </Link>
               <Link
                 to="/bounties"
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-500 hover:bg-indigo-600"
               >
                 View Bounties
               </Link>
             </div>
           </div>
-
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Featured Opportunities
-            </h2>
-            {/* Add featured jobs and bounties here */}
-          </div>
-        </div>
-
-        <div className="lg:col-span-1">
-          <RecentEarners />
         </div>
       </div>
 
+      {/* Platform Stats */}
+      <div className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {platformStats.map((stat) => (
+              <div key={stat.id} className="bg-indigo-50 rounded-lg p-6 text-center">
+                <p className="text-3xl font-bold text-indigo-700 mb-1">{stat.value}</p>
+                <p className="text-sm text-gray-600">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {/* Verified Events Carousel */}
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Verified Events</h2>
+                <div className="relative h-64 overflow-hidden rounded-lg">
+                  {verifiedEvents.map((event, index) => (
+                    <div
+                      key={event.id}
+                      className={`absolute inset-0 transition-opacity duration-500 ${
+                        index === currentSlide ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      <img
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                        <h3 className="text-white font-bold">{event.title}</h3>
+                        <p className="text-indigo-200 text-sm">{event.date}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="absolute bottom-4 right-4 flex space-x-2">
+                    {verifiedEvents.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentSlide(index)}
+                        className={`w-2 h-2 rounded-full ${
+                          index === currentSlide ? 'bg-white' : 'bg-white/50'
+                        }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Grants Section */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Available Grants</h2>
+              <div className="space-y-4">
+                {grants.map((grant) => (
+                  <div key={grant.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{grant.title}</h3>
+                        <p className="text-sm text-gray-500">Deadline: {grant.deadline}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-indigo-600">{grant.amount}</p>
+                        <p className="text-xs text-gray-500">{grant.applicants} applicants</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Link
+                        to={`/grants/${grant.id}`}
+                        className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        View Details →
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                <div className="text-center mt-4">
+                  <Link
+                    to="/grants"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+                  >
+                    View All Grants
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-1">
+            <RecentEarners />
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
       <div className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:text-center">
@@ -156,206 +289,48 @@ function Home() {
         </div>
       </div>
 
-      <div className="bg-gray-50 py-12">
+      {/* Footer with ICP branding */}
+      <footer className="bg-gray-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              Latest Opportunities
-            </h2>
-            <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 sm:mt-4">
-              Check out the most recent jobs and bounties posted on our platform.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <h3 className="text-xl font-bold mb-4">Earnify</h3>
+              <p className="text-gray-400 mb-4">
+                Find opportunities, showcase your skills, and earn rewards on the Internet Computer.
+              </p>
+              <div className="flex items-center">
+                {/* <span className="text-gray-400 mr-2">Powered by</span> */}
+                <img 
+                  src={poweredByICPLogo} 
+                  alt="Powered by ICP" 
+                  className="h-6"
+                />
+              </div>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li><Link to="/jobs" className="text-gray-400 hover:text-white">Jobs</Link></li>
+                <li><Link to="/bounties" className="text-gray-400 hover:text-white">Bounties</Link></li>
+                <li><Link to="/grants" className="text-gray-400 hover:text-white">Grants</Link></li>
+                <li><Link to="/leaderboard" className="text-gray-400 hover:text-white">Leaderboard</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Support</h4>
+              <ul className="space-y-2">
+                <li><Link to="/help" className="text-gray-400 hover:text-white">Help Center</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white">Contact Us</Link></li>
+                <li><Link to="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link></li>
+              </ul>
+            </div>
           </div>
-
-          {loading ? (
-            <div className="mt-10 flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-          ) : (
-            <div className="mt-10">
-              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Jobs</h3>
-                  {recentJobs.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentJobs.map((job) => (
-                        <div key={job.id} className="bg-white shadow overflow-hidden sm:rounded-lg">
-                          <div className="px-4 py-5 sm:px-6">
-                            <h4 className="text-lg font-medium text-gray-900">{job.title}</h4>
-                            <p className="mt-1 text-sm text-gray-500">{job.company}</p>
-                            <p className="mt-1 text-sm text-gray-500">Posted: {formatDate(job.createdAt)}</p>
-                          </div>
-                          <div className="border-t border-gray-200 px-4 py-4 sm:px-6">
-                            <div className="flex justify-between">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                {job.jobType}
-                              </span>
-                              <Link
-                                to={`/jobs/${job.id}`}
-                                className="text-indigo-600 hover:text-indigo-900 font-medium"
-                              >
-                                View Details
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="text-center mt-4">
-                        <Link
-                          to="/jobs"
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-                        >
-                          View All Jobs
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">No jobs available at the moment.</p>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Bounties</h3>
-                  {recentBounties.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentBounties.map((bounty) => (
-                        <div key={bounty.id} className="bg-white shadow overflow-hidden sm:rounded-lg">
-                          <div className="px-4 py-5 sm:px-6">
-                            <h4 className="text-lg font-medium text-gray-900">{bounty.title}</h4>
-                            <p className="mt-1 text-sm text-gray-500">Reward: {bounty.reward} ICP</p>
-                            <p className="mt-1 text-sm text-gray-500">Posted: {formatDate(bounty.createdAt)}</p>
-                          </div>
-                          <div className="border-t border-gray-200 px-4 py-4 sm:px-6">
-                            <div className="flex justify-between">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {bounty.status}
-                              </span>
-                              <Link
-                                to={`/bounties/${bounty.id}`}
-                                className="text-indigo-600 hover:text-indigo-900 font-medium"
-                              >
-                                View Details
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="text-center mt-4">
-                        <Link
-                          to="/bounties"
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-                        >
-                          View All Bounties
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">No bounties available at the moment.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              What Our Users Say
-            </h2>
-            <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 sm:mt-4">
-              Hear from people who have found opportunities and earned rewards on our platform.
-            </p>
-          </div>
-
-          <div className="mt-10">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <span className="text-indigo-600 font-bold">JD</span>
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">John Doe</h4>
-                    <p className="text-sm text-gray-500">Software Developer</p>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "I found my dream job through Earnify. The platform made it easy to showcase my skills and connect with employers."
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <span className="text-indigo-600 font-bold">AS</span>
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">Alice Smith</h4>
-                    <p className="text-sm text-gray-500">Freelance Designer</p>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "The bounties on Earnify have been a great way for me to earn extra income while working on interesting projects."
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <span className="text-indigo-600 font-bold">RJ</span>
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">Robert Johnson</h4>
-                    <p className="text-sm text-gray-500">Employer</p>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "As an employer, Earnify has helped me find talented professionals for my projects. The platform is efficient and user-friendly."
-                </p>
-              </div>
-            </div>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; {new Date().getFullYear()} Earnify. All rights reserved.</p>
           </div>
         </div>
-      </div>
-
-      <div className="bg-indigo-700">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            <span className="block">Ready to get started?</span>
-            <span className="block text-indigo-200">Join our platform today.</span>
-          </h2>
-          <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
-            <div className="inline-flex rounded-md shadow">
-              {user ? (
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50"
-                >
-                  Sign In Now
-                </Link>
-              )}
-            </div>
-            <div className="ml-3 inline-flex rounded-md shadow">
-              <Link
-                to="/how-it-works"
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-500 hover:bg-indigo-600"
-              >
-                Learn More
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      </footer>
     </div>
   );
 }
