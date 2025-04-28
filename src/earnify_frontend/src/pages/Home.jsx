@@ -11,6 +11,27 @@ function Home() {
   const [recentBounties, setRecentBounties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [particles, setParticles] = useState([]);
+
+  // Generate random particles
+  useEffect(() => {
+    const generateParticles = () => {
+      const newParticles = [];
+      for (let i = 0; i < 20; i++) {
+        newParticles.push({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 3 + 1,
+          duration: Math.random() * 20 + 10,
+          delay: Math.random() * 5,
+        });
+      }
+      setParticles(newParticles);
+    };
+
+    generateParticles();
+  }, []);
 
   // Placeholder data for verified events
   const verifiedEvents = [
@@ -84,10 +105,31 @@ function Home() {
             alt="Background"
             className="w-full h-full object-cover opacity-20"
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 via-indigo-700 to-indigo-900 animate-gradient-x-slow opacity-80"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
+          
+          {/* Floating particles */}
+          {particles.map((particle) => (
+            <div
+              key={particle.id}
+              className="absolute rounded-full bg-white opacity-30"
+              style={{
+                left: `${particle.x}%`,
+                top: `${particle.y}%`,
+                width: `${particle.size}px`,
+                height: `${particle.size}px`,
+                animation: `float ${particle.duration}s ease-in-out ${particle.delay}s infinite alternate`,
+              }}
+            ></div>
+          ))}
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">
+            <h1 className={`text-4xl md:text-5xl font-extrabold tracking-tight mb-4 ${
+              user 
+                ? 'animate-gradient bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 via-white to-indigo-200 bg-[length:200%_auto] animate-gradient-x'
+                : 'text-white'
+            }`}>
               {user ? `Welcome back, ${user.username || 'User'}!` : 'Welcome to Earnify'}
             </h1>
             <p className="text-xl md:text-2xl text-indigo-100 max-w-3xl mx-auto mb-8">
