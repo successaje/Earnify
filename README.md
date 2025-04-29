@@ -134,11 +134,7 @@ We welcome contributions from the community! Please see our [Contributing Guidel
 This project is licensed under the [MIT License](LICENSE).
 
 ## Contact
-
-- Website: [earnify.io](https://earnify.io)
-- Twitter: [@earnify](https://twitter.com/earnify)
-- Discord: [Earnify Community](https://discord.gg/earnify)
-- Email: contact@earnify.io
+----
 
 ---
 
