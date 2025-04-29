@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import poweredByICPLogo from '../assets/powered-by-icp.png';
 
 const Footer = () => {
   return (
@@ -72,8 +73,13 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} Earnify. All rights reserved.</p>
+        <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+          <div className="flex flex-col items-center">
+            <div className="mb-4">
+              <img src={poweredByICPLogo} alt="Powered by ICP" className="h-8 object-contain" />
+            </div>
+            <p className="text-gray-400">&copy; {new Date().getFullYear()} Earnify. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>

@@ -34,6 +34,10 @@ actor Earnify {
     type Notification = Types.Notification;
     type JobAnalytics = Types.JobAnalytics;
     type SearchFilters = Types.SearchFilters;
+    type Bounty = Types.Bounty;
+    type BountySubmission = Types.BountySubmission;
+    type BountyAnalytics = Types.BountyAnalytics;
+    type VerificationRequest = Types.VerificationRequest;
     
 
 
@@ -45,6 +49,10 @@ actor Earnify {
     private var userSessions = HashMap.HashMap<Principal, Text>(0, Principal.equal, Principal.hash);
     private var notifications = HashMap.HashMap<Text, Notification>(0, Text.equal, Text.hash);
     private var jobAnalytics = HashMap.HashMap<Text, JobAnalytics>(0, Text.equal, Text.hash);
+    private var bounties = HashMap.HashMap<Text, Bounty>(0, Text.equal, Text.hash);
+    private var bountySubmissions = HashMap.HashMap<Text, BountySubmission>(0, Text.equal, Text.hash);
+    private var bountyAnalytics = HashMap.HashMap<Text, BountyAnalytics>(0, Text.equal, Text.hash);
+    private var verificationRequests = HashMap.HashMap<Text, VerificationRequest>(0, Text.equal, Text.hash);
     
     // Initialize with some default categories
     private func initializeCategories() {
@@ -65,17 +73,25 @@ actor Earnify {
     public shared(msg) func createUser(
         username: Text,
         email: Text,
-        bio: Text,
+        bio: ?Text,
         skills: [Text],
         role: Text,
-        preferences: JobPreferences
+        preferences: JobPreferences,
+        socialLinks: ?Types.SocialLinks,
+        proofOfWork: [Types.ProofOfWork]
     ) : async Result.Result<UserProfile, Text> {
         let principal = msg.caller;
         
         if (users.get(principal) != null) {
             return #err("User already exists");
         };
+
+        if (msg.caller == Principal.fromText("2vxsx-fae")) {
+            // 2vxsx-fae is anonymous
+            return #err("Anonymous callers are not allowed");
+        };
         
+        let now = Int.abs(Time.now());
         let user = {
             principal = principal;
             username = username;
@@ -84,15 +100,24 @@ actor Earnify {
             skills = skills;
             experience = [];
             education = [];
-            createdAt = Int.abs(Time.now());
-            updatedAt = Int.abs(Time.now());
+            createdAt = now;
+            updatedAt = now;
             role = role;
             verified = false;
+            verificationType = null;
+            verificationRequestId = null;
             preferences = preferences;
+            socialLinks = socialLinks;
+            proofOfWork = proofOfWork;
+            totalEarnings = 0.0;
+            completedJobs = 0;
+            completedBounties = 0;
+            reputation = 0.0;
         };
         
         users.put(principal, user);
-        #ok(user)
+        
+        return #ok(user);
     };
     
     public query func getUser(principal: Principal) : async Result.Result<UserProfile, Text> {
@@ -108,7 +133,14 @@ actor Earnify {
         bio: Text,
         skills: [Text],
         role: Text,
-        preferences: JobPreferences
+        preferences: JobPreferences,
+        socialLinks: ?{
+            linkedin: ?Text;
+            twitter: ?Text;
+            github: ?Text;
+            portfolio: ?Text;
+        },
+        proofOfWork: [Types.ProofOfWork]
     ) : async Result.Result<UserProfile, Text> {
         let principal = msg.caller;
         
@@ -119,7 +151,7 @@ actor Earnify {
                     principal = user.principal;
                     username = username;
                     email = email;
-                    bio = bio;
+                    bio = ?bio;
                     skills = skills;
                     experience = user.experience;
                     education = user.education;
@@ -127,7 +159,15 @@ actor Earnify {
                     updatedAt = Int.abs(Time.now());
                     role = role;
                     verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
                     preferences = preferences;
+                    completedJobs = user.completedJobs;
+                    completedBounties = user.completedBounties;
+                    totalEarnings = user.totalEarnings;
+                    reputation = user.reputation;
+                    proofOfWork = proofOfWork;
+                    socialLinks = socialLinks;
                 };
                 
                 users.put(principal, updatedUser);
@@ -646,5 +686,750 @@ actor Earnify {
             case (?sessionToken) { sessionToken == token };
             case (null) { false };
         };
+    };
+
+    // Bounty Management
+    public shared(msg) func createBounty(
+        title: Text,
+        description: Text,
+        reward: Float,
+        currency: Text,
+        deadline: Int,
+        category: Text,
+        skills: [Text],
+        requirements: [Text],
+        tags: [Text]
+    ) : async Result.Result<Bounty, Text> {
+        let principal = msg.caller;
+        
+        switch (users.get(principal)) {
+            case (null) { #err("User not found") };
+            case (?user) {
+                if (user.role != "employer") {
+                    return #err("Only employers can post bounties");
+                };
+                
+                let bountyId = Text.concat("bounty_", Nat.toText(Int.abs(Time.now())));
+                
+                let bounty = {
+                    id = bountyId;
+                    title = title;
+                    description = description;
+                    reward = reward;
+                    currency = currency;
+                    deadline = deadline;
+                    status = "open";
+                    category = category;
+                    skills = skills;
+                    postedBy = principal;
+                    postedAt = Int.abs(Time.now());
+                    submissions = [];
+                    requirements = requirements;
+                    tags = tags;
+                    views = 0;
+                    submissionCount = 0;
+                };
+                
+                bounties.put(bountyId, bounty);
+                
+                // Initialize analytics for the bounty
+                let analytics = {
+                    bountyId = bountyId;
+                    views = 0;
+                    submissions = 0;
+                    uniqueSubmitters = 0;
+                    averageSubmissionTime = 0;
+                    conversionRate = 0.0;
+                };
+                
+                bountyAnalytics.put(bountyId, analytics);
+                #ok(bounty)
+            };
+        };
+    };
+    
+    public query func getBounty(bountyId: Text) : async Result.Result<Bounty, Text> {
+        switch (bounties.get(bountyId)) {
+            case (null) { #err("Bounty not found") };
+            case (?bounty) { #ok(bounty) };
+        };
+    };
+    
+    public query func getAllBounties() : async [Bounty] {
+        Iter.toArray(bounties.vals())
+    };
+    
+    public shared(msg) func submitBounty(
+        bountyId: Text,
+        description: Text,
+        attachments: [Text]
+    ) : async Result.Result<BountySubmission, Text> {
+        let principal = msg.caller;
+        
+        switch (users.get(principal)) {
+            case (null) { #err("User not found") };
+            case (?user) {
+                if (user.role != "job_seeker") {
+                    return #err("Only job seekers can submit to bounties");
+                };
+                
+                switch (bounties.get(bountyId)) {
+                    case (null) { #err("Bounty not found") };
+                    case (?bounty) {
+                        if (bounty.status != "open") {
+                            return #err("Bounty is not open for submissions");
+                        };
+                        
+                        let submissionId = Text.concat(bountyId, Principal.toText(principal));
+                        
+                        let submission = {
+                            id = submissionId;
+                            bountyId = bountyId;
+                            submitter = principal;
+                            description = description;
+                            status = "pending";
+                            submittedAt = Int.abs(Time.now());
+                            updatedAt = Int.abs(Time.now());
+                            attachments = attachments;
+                            feedback = null;
+                        };
+                        
+                        bountySubmissions.put(submissionId, submission);
+                        
+                        // Update bounty submissions
+                        let updatedBounty = {
+                            id = bounty.id;
+                            title = bounty.title;
+                            description = bounty.description;
+                            reward = bounty.reward;
+                            currency = bounty.currency;
+                            deadline = bounty.deadline;
+                            status = bounty.status;
+                            category = bounty.category;
+                            skills = bounty.skills;
+                            postedBy = bounty.postedBy;
+                            postedAt = bounty.postedAt;
+                            submissions = Array.append(bounty.submissions, [submission]);
+                            requirements = bounty.requirements;
+                            tags = bounty.tags;
+                            views = bounty.views;
+                            submissionCount = bounty.submissionCount + 1;
+                        };
+                        
+                        bounties.put(bountyId, updatedBounty);
+                        
+                        // Update analytics
+                        switch (bountyAnalytics.get(bountyId)) {
+                            case (?analytics) {
+                                let updatedAnalytics = {
+                                    bountyId = analytics.bountyId;
+                                    views = analytics.views;
+                                    submissions = analytics.submissions + 1;
+                                    uniqueSubmitters = analytics.uniqueSubmitters + 1;
+                                    averageSubmissionTime = analytics.averageSubmissionTime;
+                                    conversionRate = Float.fromInt(analytics.submissions + 1) / Float.fromInt(analytics.views);
+                                };
+                                bountyAnalytics.put(bountyId, updatedAnalytics);
+                            };
+                            case (null) { };
+                        };
+                        
+                        // Create notification for bounty poster
+                        let notificationId = Text.concat("notif_", Nat.toText(Int.abs(Time.now())));
+                        let notification = {
+                            id = notificationId;
+                            userId = bounty.postedBy;
+                            title = "New Bounty Submission";
+                            message = Text.concat("New submission for ", bounty.title);
+                            notificationType = "submission";
+                            read = false;
+                            createdAt = Int.abs(Time.now());
+                            data = submissionId;
+                        };
+                        notifications.put(notificationId, notification);
+                        
+                        #ok(submission)
+                    };
+                };
+            };
+        };
+    };
+    
+    public query func getBountySubmissions(bountyId: Text) : async [BountySubmission] {
+        let bountySubs = Buffer.Buffer<BountySubmission>(0);
+        
+        for ((_, submission) in bountySubmissions.entries()) {
+            if (submission.bountyId == bountyId) {
+                bountySubs.add(submission);
+            };
+        };
+        
+        Buffer.toArray(bountySubs)
+    };
+    
+    public shared(msg) func updateBountyStatus(
+        bountyId: Text,
+        status: Text
+    ) : async Result.Result<Bounty, Text> {
+        let principal = msg.caller;
+        
+        switch (bounties.get(bountyId)) {
+            case (null) { #err("Bounty not found") };
+            case (?bounty) {
+                if (bounty.postedBy != principal) {
+                    return #err("Unauthorized to update bounty status");
+                };
+                
+                let updatedBounty = {
+                    id = bounty.id;
+                    title = bounty.title;
+                    description = bounty.description;
+                    reward = bounty.reward;
+                    currency = bounty.currency;
+                    deadline = bounty.deadline;
+                    status = status;
+                    category = bounty.category;
+                    skills = bounty.skills;
+                    postedBy = bounty.postedBy;
+                    postedAt = bounty.postedAt;
+                    submissions = bounty.submissions;
+                    requirements = bounty.requirements;
+                    tags = bounty.tags;
+                    views = bounty.views;
+                    submissionCount = bounty.submissionCount;
+                };
+                
+                bounties.put(bountyId, updatedBounty);
+                
+                // Create notification for all submitters
+                for (submission in bounty.submissions.vals()) {
+                    let notificationId = Text.concat("notif_", Nat.toText(Int.abs(Time.now())));
+                    let notification = {
+                        id = notificationId;
+                        userId = submission.submitter;
+                        title = "Bounty Status Updated";
+                        message = "The bounty " # bounty.title # " has been " # status;
+                        notificationType = "status_update";
+                        read = false;
+                        createdAt = Int.abs(Time.now());
+                        data = bountyId;
+                    };
+                    notifications.put(notificationId, notification);
+                };
+                
+                #ok(updatedBounty)
+            };
+        };
+    };
+    
+    public shared(msg) func updateSubmissionStatus(
+        submissionId: Text,
+        status: Text,
+        feedback: ?Text
+    ) : async Result.Result<BountySubmission, Text> {
+        let principal = msg.caller;
+        
+        switch (bountySubmissions.get(submissionId)) {
+            case (null) { #err("Submission not found") };
+            case (?submission) {
+                switch (bounties.get(submission.bountyId)) {
+                    case (null) { #err("Bounty not found") };
+                    case (?bounty) {
+                        if (bounty.postedBy != principal) {
+                            return #err("Unauthorized to update submission status");
+                        };
+                        
+                        let updatedSubmission = {
+                            id = submission.id;
+                            bountyId = submission.bountyId;
+                            submitter = submission.submitter;
+                            description = submission.description;
+                            status = status;
+                            submittedAt = submission.submittedAt;
+                            updatedAt = Int.abs(Time.now());
+                            attachments = submission.attachments;
+                            feedback = feedback;
+                        };
+                        
+                        bountySubmissions.put(submissionId, updatedSubmission);
+                        
+                        // Create notification for submitter
+                        let notificationId = Text.concat("notif_", Nat.toText(Int.abs(Time.now())));
+                        let notification = {
+                            id = notificationId;
+                            userId = submission.submitter;
+                            title = "Submission Status Updated";
+                            message = "Your submission for " # bounty.title # " has been " # status;
+                            notificationType = "status_update";
+                            read = false;
+                            createdAt = Int.abs(Time.now());
+                            data = submissionId;
+                        };
+                        notifications.put(notificationId, notification);
+                        
+                        #ok(updatedSubmission)
+                    };
+                };
+            };
+        };
+    };
+    
+    public shared(msg) func incrementBountyViews(bountyId: Text) : async Result.Result<(), Text> {
+        switch (bounties.get(bountyId)) {
+            case (null) { #err("Bounty not found") };
+            case (?bounty) {
+                let updatedBounty = {
+                    id = bounty.id;
+                    title = bounty.title;
+                    description = bounty.description;
+                    reward = bounty.reward;
+                    currency = bounty.currency;
+                    deadline = bounty.deadline;
+                    status = bounty.status;
+                    category = bounty.category;
+                    skills = bounty.skills;
+                    postedBy = bounty.postedBy;
+                    postedAt = bounty.postedAt;
+                    submissions = bounty.submissions;
+                    requirements = bounty.requirements;
+                    tags = bounty.tags;
+                    views = bounty.views + 1;
+                    submissionCount = bounty.submissionCount;
+                };
+                
+                bounties.put(bountyId, updatedBounty);
+                
+                // Update analytics
+                switch (bountyAnalytics.get(bountyId)) {
+                    case (?analytics) {
+                        let updatedAnalytics = {
+                            bountyId = analytics.bountyId;
+                            views = analytics.views + 1;
+                            submissions = analytics.submissions;
+                            uniqueSubmitters = analytics.uniqueSubmitters;
+                            averageSubmissionTime = analytics.averageSubmissionTime;
+                            conversionRate = Float.fromInt(analytics.submissions) / Float.fromInt(analytics.views + 1);
+                        };
+                        bountyAnalytics.put(bountyId, updatedAnalytics);
+                    };
+                    case (null) { };
+                };
+                
+                #ok()
+            };
+        };
+    };
+    
+    public query func getBountyAnalytics(bountyId: Text) : async Result.Result<BountyAnalytics, Text> {
+        switch (bountyAnalytics.get(bountyId)) {
+            case (null) { #err("Analytics not found") };
+            case (?analytics) { #ok(analytics) };
+        };
+    };
+
+    public shared(msg) func updateSocialLinks(
+        linkedin: ?Text,
+        twitter: ?Text,
+        github: ?Text,
+        portfolio: ?Text
+    ) : async Result.Result<UserProfile, Text> {
+        let principal = msg.caller;
+        
+        switch (users.get(principal)) {
+            case (null) { #err("User not found") };
+            case (?user) {
+                let updatedUser = {
+                    principal = user.principal;
+                    username = user.username;
+                    email = user.email;
+                    bio = user.bio;
+                    skills = user.skills;
+                    experience = user.experience;
+                    education = user.education;
+                    createdAt = user.createdAt;
+                    updatedAt = Int.abs(Time.now());
+                    role = user.role;
+                    verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
+                    preferences = user.preferences;
+                    completedJobs = user.completedJobs;
+                    completedBounties = user.completedBounties;
+                    totalEarnings = user.totalEarnings;
+                    reputation = user.reputation;
+                    proofOfWork = user.proofOfWork;
+                    socialLinks = ?{
+                        linkedin = linkedin;
+                        twitter = twitter;
+                        github = github;
+                        portfolio = portfolio;
+                    };
+                };
+                
+                users.put(principal, updatedUser);
+                #ok(updatedUser)
+            };
+        };
+    };
+
+    public shared(msg) func addProofOfWork(
+        title: Text,
+        description: Text,
+        url: ?Text,
+        powType: Text
+    ) : async Result.Result<UserProfile, Text> {
+        let principal = msg.caller;
+        
+        switch (users.get(principal)) {
+            case (null) { #err("User not found") };
+            case (?user) {
+                let newProofOfWork = {
+                    id = Text.concat(Principal.toText(principal), Nat.toText(Int.abs(Time.now())));
+                    title = title;
+                    description = description;
+                    url = url;
+                    date = Int.abs(Time.now());
+                    powType = powType;
+                };
+
+                let updatedUser = {
+                    principal = user.principal;
+                    username = user.username;
+                    email = user.email;
+                    bio = user.bio;
+                    skills = user.skills;
+                    experience = user.experience;
+                    education = user.education;
+                    createdAt = user.createdAt;
+                    updatedAt = Int.abs(Time.now());
+                    role = user.role;
+                    verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
+                    preferences = user.preferences;
+                    completedJobs = user.completedJobs;
+                    completedBounties = user.completedBounties;
+                    totalEarnings = user.totalEarnings;
+                    reputation = user.reputation;
+                    proofOfWork = Array.append(user.proofOfWork, [newProofOfWork]);
+                    socialLinks = user.socialLinks;
+                };
+                
+                users.put(principal, updatedUser);
+                #ok(updatedUser)
+            };
+        };
+    };
+
+    public shared(msg) func removeProofOfWork(id: Text) : async Result.Result<UserProfile, Text> {
+        let principal = msg.caller;
+        
+        switch (users.get(principal)) {
+            case (null) { #err("User not found") };
+            case (?user) {
+                let updatedProofOfWork = Array.filter<Types.ProofOfWork>(
+                    user.proofOfWork,
+                    func(pow) { pow.id != id }
+                );
+
+                let updatedUser = {
+                    principal = user.principal;
+                    username = user.username;
+                    email = user.email;
+                    bio = user.bio;
+                    skills = user.skills;
+                    experience = user.experience;
+                    education = user.education;
+                    createdAt = user.createdAt;
+                    updatedAt = Int.abs(Time.now());
+                    role = user.role;
+                    verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
+                    preferences = user.preferences;
+                    completedJobs = user.completedJobs;
+                    completedBounties = user.completedBounties;
+                    totalEarnings = user.totalEarnings;
+                    reputation = user.reputation;
+                    proofOfWork = updatedProofOfWork;
+                    socialLinks = user.socialLinks;
+                };
+                
+                users.put(principal, updatedUser);
+                #ok(updatedUser)
+            };
+        };
+    };
+
+    // Get all users for the leaderboard
+    public query func getAllUsers() : async Result.Result<[UserProfile], Text> {
+        let userList = Buffer.Buffer<UserProfile>(0);
+        for ((_, user) in users.entries()) {
+            userList.add(user);
+        };
+        #ok(Buffer.toArray(userList))
+    };
+
+    // Verification Request Management
+    public shared(msg) func submitVerificationRequest(
+        organizationName: Text,
+        organizationType: Text,
+        description: Text,
+        website: ?Text,
+        documents: [Text]
+    ) : async Result.Result<VerificationRequest, Text> {
+        let principal = msg.caller;
+        
+        // Check if user exists
+        let userOpt = users.get(principal);
+        switch (userOpt) {
+            case null {
+                return #err("User not found");
+            };
+            case (?user) {
+                // Check if user already has a pending verification request
+                let existingRequests = Iter.toArray(verificationRequests.vals());
+                let pendingRequest = Array.find<VerificationRequest>(
+                    existingRequests,
+                    func(req) { req.userId == principal and req.status == "pending" }
+                );
+                
+                switch (pendingRequest) {
+                    case (?req) {
+                        return #err("You already have a pending verification request");
+                    };
+                    case null {
+                        // Create new verification request
+                        let requestId = generateId();
+                        let now = Int.abs(Time.now());
+                        
+                        let newRequest = {
+                            id = requestId;
+                            userId = principal;
+                            organizationName = organizationName;
+                            organizationType = organizationType;
+                            description = description;
+                            website = website;
+                            documents = documents;
+                            status = "pending";
+                            submittedAt = now;
+                            processedAt = null;
+                            processedBy = null;
+                            notes = null;
+                        };
+                        
+                        verificationRequests.put(requestId, newRequest);
+                        
+                        // Update user profile with verification request ID
+                        let updatedUser = {
+                            principal = user.principal;
+                            username = user.username;
+                            email = user.email;
+                            bio = user.bio;
+                            skills = user.skills;
+                            experience = user.experience;
+                            education = user.education;
+                            createdAt = user.createdAt;
+                            updatedAt = now;
+                            role = user.role;
+                            verified = user.verified;
+                            verificationType = user.verificationType;
+                            verificationRequestId = ?requestId;
+                            preferences = user.preferences;
+                            socialLinks = user.socialLinks;
+                            proofOfWork = user.proofOfWork;
+                            totalEarnings = user.totalEarnings;
+                            completedJobs = user.completedJobs;
+                            completedBounties = user.completedBounties;
+                            reputation = user.reputation;
+                        };
+                        
+                        users.put(principal, updatedUser);
+                        
+                        // Create notification for admin
+                        let notificationId = generateId();
+                        let notification = {
+                            id = notificationId;
+                            userId = principal; // This will be updated by admin
+                            title = "New Verification Request";
+                            message = "A new verification request has been submitted by " # user.username;
+                            notificationType = "verification_request";
+                            read = false;
+                            createdAt = now;
+                            data = requestId;
+                        };
+                        
+                        notifications.put(notificationId, notification);
+                        
+                        return #ok(newRequest);
+                    };
+                };
+            };
+        };
+    };
+    
+    public shared(msg) func processVerificationRequest(
+        requestId: Text,
+        status: Text,
+        notes: ?Text
+    ) : async Result.Result<VerificationRequest, Text> {
+        let principal = msg.caller;
+        
+        // Check if request exists
+        let requestOpt = verificationRequests.get(requestId);
+        switch (requestOpt) {
+            case null {
+                return #err("Verification request not found");
+            };
+            case (?request) {
+                // Check if request is already processed
+                if (request.status != "pending") {
+                    return #err("Verification request has already been processed");
+                };
+                
+                // Update request
+                let now = Int.abs(Time.now());
+                let updatedRequest = {
+                    id = request.id;
+                    userId = request.userId;
+                    organizationName = request.organizationName;
+                    organizationType = request.organizationType;
+                    description = request.description;
+                    website = request.website;
+                    documents = request.documents;
+                    status = status;
+                    submittedAt = request.submittedAt;
+                    processedAt = ?now;
+                    processedBy = ?principal;
+                    notes = notes;
+                };
+                
+                verificationRequests.put(requestId, updatedRequest);
+                
+                // Update user profile if approved
+                if (status == "approved") {
+                    let userOpt = users.get(request.userId);
+                    switch (userOpt) {
+                        case null {
+                            // User not found, should not happen
+                        };
+                        case (?user) {
+                            let updatedUser = {
+                                principal = user.principal;
+                                username = user.username;
+                                email = user.email;
+                                bio = user.bio;
+                                skills = user.skills;
+                                experience = user.experience;
+                                education = user.education;
+                                createdAt = user.createdAt;
+                                updatedAt = now;
+                                role = user.role;
+                                verified = true;
+                                verificationType = ?request.organizationType;
+                                verificationRequestId = ?requestId;
+                                preferences = user.preferences;
+                                socialLinks = user.socialLinks;
+                                proofOfWork = user.proofOfWork;
+                                totalEarnings = user.totalEarnings;
+                                completedJobs = user.completedJobs;
+                                completedBounties = user.completedBounties;
+                                reputation = user.reputation;
+                            };
+                            
+                            users.put(request.userId, updatedUser);
+                            
+                            // Create notification for user
+                            let notificationId = generateId();
+                            let notification = {
+                                id = notificationId;
+                                userId = request.userId;
+                                title = "Verification Request Approved";
+                                message = "Your verification request has been approved. Your account is now verified.";
+                                notificationType = "verification_approved";
+                                read = false;
+                                createdAt = now;
+                                data = "";
+                            };
+                            
+                            notifications.put(notificationId, notification);
+                        };
+                    };
+                } else if (status == "rejected") {
+                    // Create notification for user
+                    let notificationId = generateId();
+                    let notification = {
+                        id = notificationId;
+                        userId = request.userId;
+                        title = "Verification Request Rejected";
+                        message = "Your verification request has been rejected. " # Option.get(notes, "");
+                        notificationType = "verification_rejected";
+                        read = false;
+                        createdAt = now;
+                        data = "";
+                    };
+                    
+                    notifications.put(notificationId, notification);
+                };
+                
+                return #ok(updatedRequest);
+            };
+        };
+    };
+    
+    public query func getVerificationRequests(
+        status: ?Text,
+        limit: Nat,
+        offset: Nat
+    ) : async [VerificationRequest] {
+        let allRequests = Iter.toArray(verificationRequests.vals());
+        
+        // Filter by status if provided
+        let filteredRequests = switch (status) {
+            case null { allRequests };
+            case (?s) {
+                Array.filter<VerificationRequest>(
+                    allRequests,
+                    func(req) { req.status == s }
+                );
+            };
+        };
+        
+        // Sort by submission date (newest first)
+        let sortedRequests = Array.sort<VerificationRequest>(
+            filteredRequests,
+            func(a, b) { Int.compare(b.submittedAt, a.submittedAt) }
+        );
+        
+        // Apply pagination
+        let start = if (offset >= sortedRequests.size()) { 0 } else { offset };
+        let end = if (start + limit > sortedRequests.size()) { sortedRequests.size() } else { start + limit };
+        
+        let paginatedRequests = Array.tabulate<VerificationRequest>(
+            end - start,
+            func(i) { sortedRequests[start + i] }
+        );
+        
+        return paginatedRequests;
+    };
+    
+    public query func getUserVerificationRequest(
+        userId: Principal
+    ) : async ?VerificationRequest {
+        let allRequests = Iter.toArray(verificationRequests.vals());
+        
+        let userRequest = Array.find<VerificationRequest>(
+            allRequests,
+            func(req) { req.userId == userId }
+        );
+        
+        return userRequest;
+    };
+    
+    // Helper function to generate unique IDs
+    private func generateId() : Text {
+        let timestamp = Int.toText(Int.abs(Time.now()));
+        let random = Int.toText(Int.abs(Time.now() % 1000));
+        return timestamp # "-" # random;
     };
 }

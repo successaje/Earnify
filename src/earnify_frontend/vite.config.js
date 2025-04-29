@@ -40,11 +40,6 @@ export default defineConfig({
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
   ],
-  server: {
-    headers: {
-      "Content-Security-Policy": "connect-src 'self' https://ic0.app https://*.ic0.app"
-    }
-  },
   resolve: {
     alias: [
       {
