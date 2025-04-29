@@ -9,7 +9,9 @@ import {
   createUser,
   getUser,
   updateUser,
-  initialize
+  initialize,
+  createVerificationRequest,
+  getVerificationRequest
 } from '../utils/ic';
 
 // Create a context for authentication
@@ -241,6 +243,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const submitVerificationRequest = async (formData) => {
+    try {
+      await createVerificationRequest(formData);
+      return true;
+    } catch (error) {
+      console.error('Error submitting verification request:', error);
+      throw error;
+    }
+  };
+
+  const getVerificationRequest = async () => {
+    try {
+      const request = await getVerificationRequest();
+      return request;
+    } catch (error) {
+      console.error('Error getting verification request:', error);
+      throw error;
+    }
+  };
+
   // Value object that will be passed to consumers of this context
   const value = {
     user,
@@ -250,7 +272,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
-    refreshUser
+    refreshUser,
+    submitVerificationRequest,
+    getVerificationRequest
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

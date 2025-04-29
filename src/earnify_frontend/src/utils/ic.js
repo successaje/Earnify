@@ -10,8 +10,10 @@ const II_URL = network === 'ic'
   ? 'https://identity.ic0.app'  // Mainnet
   : 'http://be2us-64aaa-aaaaa-qaabq-cai.localhost:4943/'; // Local
 
-// Backend canister ID - replace with your deployed canister ID
-const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
+// Local canister ID - replace with your deployed canister ID
+// const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
+// Production canister ID
+const CANISTER_ID = '2pysh-dyaaa-aaaal-asd3a-cai';
 
 // Singleton instances
 let authClientInstance = null;
@@ -821,6 +823,47 @@ export const removeProofOfWork = async (id) => {
     }
   } catch (error) {
     console.error('Error removing proof of work:', error);
+    throw error;
+  }
+};
+
+export const createVerificationRequest = async (formData) => {
+  try {
+    const principal = await getCurrentPrincipal();
+    if (!principal || principal.isAnonymous()) {
+      throw new Error('User must be authenticated');
+    }
+
+    const requestData = {
+      organizationName: formData.organizationName,
+      organizationType: formData.organizationType,
+      description: formData.description,
+      website: formData.website,
+      documents: formData.documents,
+      status: 'pending',
+      createdAt: BigInt(Date.now()),
+      updatedAt: BigInt(Date.now())
+    };
+
+    const result = await actor.createVerificationRequest(requestData);
+    return result;
+  } catch (error) {
+    console.error('Error creating verification request:', error);
+    throw error;
+  }
+};
+
+export const getVerificationRequest = async () => {
+  try {
+    const principal = await getCurrentPrincipal();
+    if (!principal || principal.isAnonymous()) {
+      throw new Error('User must be authenticated');
+    }
+
+    const request = await actor.getVerificationRequest(principal);
+    return request;
+  } catch (error) {
+    console.error('Error getting verification request:', error);
     throw error;
   }
 }; 

@@ -16,6 +16,21 @@ module {
         powType: Text; // "blog", "project", "article", etc.
     };
 
+    public type VerificationRequest = {
+        id: Text;
+        userId: Principal;
+        organizationName: Text;
+        organizationType: Text; // "company", "nonprofit", "educational", "individual"
+        description: Text;
+        website: ?Text;
+        documents: [Text]; // URLs or hashes of verification documents
+        status: Text; // "pending", "approved", "rejected"
+        submittedAt: Int;
+        processedAt: ?Int;
+        processedBy: ?Principal;
+        notes: ?Text;
+    };
+
     public type UserProfile = {
         principal: Principal;
         username: Text;
@@ -28,6 +43,8 @@ module {
         updatedAt: Int;
         role: Text;
         verified: Bool;
+        verificationType: ?Text; // "sponsor", "earner", null
+        verificationRequestId: ?Text;
         preferences: JobPreferences;
         socialLinks: ?SocialLinks;
         proofOfWork: [ProofOfWork];

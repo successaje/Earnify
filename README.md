@@ -4,18 +4,20 @@
 
 ## Overview
 
-Earnify is a decentralized talent marketplace built on the Internet Computer Protocol (ICP) that connects skilled professionals with opportunities to earn, learn, and grow. Unlike traditional platforms, Earnify leverages blockchain technology to create a transparent, fair, and efficient ecosystem for talent discovery, job matching, and bounty completion.
+Earnify is a decentralized talent marketplace built on the Internet Computer Protocol (ICP) that connects skilled professionals with opportunities to earn, learn, and grow. Unlike traditional platforms, Earnify leverages blockchain technology to create a transparent, fair, and efficient ecosystem for talent discovery, job matching, bounty completion, hackathons and access to funding.
 
 ## Key Features
 
 ### For Talent
 - **Profile Showcase**: Create detailed profiles highlighting skills, experience, education, and proof of work
 - **Job Discovery**: Browse and apply for jobs that match your skills and preferences
+- **Hackathons**: Join simple hackathons or (L2E models)
 - **Bounty System**: Complete bounties to earn rewards and build your portfolio
 - **Multi-Token Payments**: Receive payments in various cryptocurrencies including ICP, ckBTC, ckETH, ckPEPE, and more
 - **Reputation System**: Build your reputation through completed jobs and bounties
 - **Learning Resources**: Access curated learning materials to upskill and stay competitive
 - **Earnings Tracking**: Monitor your earnings and track your financial growth
+- **Fundings and Grants**: Apply for funding or grant with top investors.
 
 ### For Employers
 - **Talent Discovery**: Find skilled professionals based on verified profiles and proof of work

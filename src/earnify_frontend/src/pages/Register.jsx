@@ -113,8 +113,17 @@ const Register = () => {
           preferredJobTypes: formData.preferences.preferredJobTypes.split(',').map(t => t.trim()),
           preferredCategories: formData.preferences.preferredCategories.split(',').map(c => c.trim()),
           salaryExpectation: parseFloat(formData.preferences.salaryExpectation) || 0
+        },
+        // Ensure socialLinks is properly formatted
+        socialLinks: {
+          linkedin: formData.socialLinks.linkedin || '',
+          twitter: formData.socialLinks.twitter || '',
+          github: formData.socialLinks.github || '',
+          portfolio: formData.socialLinks.portfolio || ''
         }
       };
+  
+      console.log('Submitting user data:', userData);
   
       // Call register function
       const result = await register(userData);

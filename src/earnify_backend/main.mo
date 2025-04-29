@@ -37,6 +37,7 @@ actor Earnify {
     type Bounty = Types.Bounty;
     type BountySubmission = Types.BountySubmission;
     type BountyAnalytics = Types.BountyAnalytics;
+    type VerificationRequest = Types.VerificationRequest;
     
 
 
@@ -51,6 +52,7 @@ actor Earnify {
     private var bounties = HashMap.HashMap<Text, Bounty>(0, Text.equal, Text.hash);
     private var bountySubmissions = HashMap.HashMap<Text, BountySubmission>(0, Text.equal, Text.hash);
     private var bountyAnalytics = HashMap.HashMap<Text, BountyAnalytics>(0, Text.equal, Text.hash);
+    private var verificationRequests = HashMap.HashMap<Text, VerificationRequest>(0, Text.equal, Text.hash);
     
     // Initialize with some default categories
     private func initializeCategories() {
@@ -89,6 +91,7 @@ actor Earnify {
             return #err("Anonymous callers are not allowed");
         };
         
+        let now = Int.abs(Time.now());
         let user = {
             principal = principal;
             username = username;
@@ -97,21 +100,24 @@ actor Earnify {
             skills = skills;
             experience = [];
             education = [];
-            createdAt = Int.abs(Time.now());
-            updatedAt = Int.abs(Time.now());
+            createdAt = now;
+            updatedAt = now;
             role = role;
             verified = false;
+            verificationType = null;
+            verificationRequestId = null;
             preferences = preferences;
+            socialLinks = socialLinks;
+            proofOfWork = proofOfWork;
+            totalEarnings = 0.0;
             completedJobs = 0;
             completedBounties = 0;
-            totalEarnings = 0.0;
             reputation = 0.0;
-            proofOfWork = proofOfWork;
-            socialLinks = socialLinks;
         };
         
         users.put(principal, user);
-        #ok(user)
+        
+        return #ok(user);
     };
     
     public query func getUser(principal: Principal) : async Result.Result<UserProfile, Text> {
@@ -153,6 +159,8 @@ actor Earnify {
                     updatedAt = Int.abs(Time.now());
                     role = role;
                     verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
                     preferences = preferences;
                     completedJobs = user.completedJobs;
                     completedBounties = user.completedBounties;
@@ -1042,6 +1050,8 @@ actor Earnify {
                     updatedAt = Int.abs(Time.now());
                     role = user.role;
                     verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
                     preferences = user.preferences;
                     completedJobs = user.completedJobs;
                     completedBounties = user.completedBounties;
@@ -1094,6 +1104,8 @@ actor Earnify {
                     updatedAt = Int.abs(Time.now());
                     role = user.role;
                     verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
                     preferences = user.preferences;
                     completedJobs = user.completedJobs;
                     completedBounties = user.completedBounties;
@@ -1132,6 +1144,8 @@ actor Earnify {
                     updatedAt = Int.abs(Time.now());
                     role = user.role;
                     verified = user.verified;
+                    verificationType = user.verificationType;
+                    verificationRequestId = user.verificationRequestId;
                     preferences = user.preferences;
                     completedJobs = user.completedJobs;
                     completedBounties = user.completedBounties;
@@ -1154,5 +1168,268 @@ actor Earnify {
             userList.add(user);
         };
         #ok(Buffer.toArray(userList))
+    };
+
+    // Verification Request Management
+    public shared(msg) func submitVerificationRequest(
+        organizationName: Text,
+        organizationType: Text,
+        description: Text,
+        website: ?Text,
+        documents: [Text]
+    ) : async Result.Result<VerificationRequest, Text> {
+        let principal = msg.caller;
+        
+        // Check if user exists
+        let userOpt = users.get(principal);
+        switch (userOpt) {
+            case null {
+                return #err("User not found");
+            };
+            case (?user) {
+                // Check if user already has a pending verification request
+                let existingRequests = Iter.toArray(verificationRequests.vals());
+                let pendingRequest = Array.find<VerificationRequest>(
+                    existingRequests,
+                    func(req) { req.userId == principal and req.status == "pending" }
+                );
+                
+                switch (pendingRequest) {
+                    case (?req) {
+                        return #err("You already have a pending verification request");
+                    };
+                    case null {
+                        // Create new verification request
+                        let requestId = generateId();
+                        let now = Int.abs(Time.now());
+                        
+                        let newRequest = {
+                            id = requestId;
+                            userId = principal;
+                            organizationName = organizationName;
+                            organizationType = organizationType;
+                            description = description;
+                            website = website;
+                            documents = documents;
+                            status = "pending";
+                            submittedAt = now;
+                            processedAt = null;
+                            processedBy = null;
+                            notes = null;
+                        };
+                        
+                        verificationRequests.put(requestId, newRequest);
+                        
+                        // Update user profile with verification request ID
+                        let updatedUser = {
+                            principal = user.principal;
+                            username = user.username;
+                            email = user.email;
+                            bio = user.bio;
+                            skills = user.skills;
+                            experience = user.experience;
+                            education = user.education;
+                            createdAt = user.createdAt;
+                            updatedAt = now;
+                            role = user.role;
+                            verified = user.verified;
+                            verificationType = user.verificationType;
+                            verificationRequestId = ?requestId;
+                            preferences = user.preferences;
+                            socialLinks = user.socialLinks;
+                            proofOfWork = user.proofOfWork;
+                            totalEarnings = user.totalEarnings;
+                            completedJobs = user.completedJobs;
+                            completedBounties = user.completedBounties;
+                            reputation = user.reputation;
+                        };
+                        
+                        users.put(principal, updatedUser);
+                        
+                        // Create notification for admin
+                        let notificationId = generateId();
+                        let notification = {
+                            id = notificationId;
+                            userId = principal; // This will be updated by admin
+                            title = "New Verification Request";
+                            message = "A new verification request has been submitted by " # user.username;
+                            notificationType = "verification_request";
+                            read = false;
+                            createdAt = now;
+                            data = requestId;
+                        };
+                        
+                        notifications.put(notificationId, notification);
+                        
+                        return #ok(newRequest);
+                    };
+                };
+            };
+        };
+    };
+    
+    public shared(msg) func processVerificationRequest(
+        requestId: Text,
+        status: Text,
+        notes: ?Text
+    ) : async Result.Result<VerificationRequest, Text> {
+        let principal = msg.caller;
+        
+        // Check if request exists
+        let requestOpt = verificationRequests.get(requestId);
+        switch (requestOpt) {
+            case null {
+                return #err("Verification request not found");
+            };
+            case (?request) {
+                // Check if request is already processed
+                if (request.status != "pending") {
+                    return #err("Verification request has already been processed");
+                };
+                
+                // Update request
+                let now = Int.abs(Time.now());
+                let updatedRequest = {
+                    id = request.id;
+                    userId = request.userId;
+                    organizationName = request.organizationName;
+                    organizationType = request.organizationType;
+                    description = request.description;
+                    website = request.website;
+                    documents = request.documents;
+                    status = status;
+                    submittedAt = request.submittedAt;
+                    processedAt = ?now;
+                    processedBy = ?principal;
+                    notes = notes;
+                };
+                
+                verificationRequests.put(requestId, updatedRequest);
+                
+                // Update user profile if approved
+                if (status == "approved") {
+                    let userOpt = users.get(request.userId);
+                    switch (userOpt) {
+                        case null {
+                            // User not found, should not happen
+                        };
+                        case (?user) {
+                            let updatedUser = {
+                                principal = user.principal;
+                                username = user.username;
+                                email = user.email;
+                                bio = user.bio;
+                                skills = user.skills;
+                                experience = user.experience;
+                                education = user.education;
+                                createdAt = user.createdAt;
+                                updatedAt = now;
+                                role = user.role;
+                                verified = true;
+                                verificationType = ?request.organizationType;
+                                verificationRequestId = ?requestId;
+                                preferences = user.preferences;
+                                socialLinks = user.socialLinks;
+                                proofOfWork = user.proofOfWork;
+                                totalEarnings = user.totalEarnings;
+                                completedJobs = user.completedJobs;
+                                completedBounties = user.completedBounties;
+                                reputation = user.reputation;
+                            };
+                            
+                            users.put(request.userId, updatedUser);
+                            
+                            // Create notification for user
+                            let notificationId = generateId();
+                            let notification = {
+                                id = notificationId;
+                                userId = request.userId;
+                                title = "Verification Request Approved";
+                                message = "Your verification request has been approved. Your account is now verified.";
+                                notificationType = "verification_approved";
+                                read = false;
+                                createdAt = now;
+                                data = "";
+                            };
+                            
+                            notifications.put(notificationId, notification);
+                        };
+                    };
+                } else if (status == "rejected") {
+                    // Create notification for user
+                    let notificationId = generateId();
+                    let notification = {
+                        id = notificationId;
+                        userId = request.userId;
+                        title = "Verification Request Rejected";
+                        message = "Your verification request has been rejected. " # Option.get(notes, "");
+                        notificationType = "verification_rejected";
+                        read = false;
+                        createdAt = now;
+                        data = "";
+                    };
+                    
+                    notifications.put(notificationId, notification);
+                };
+                
+                return #ok(updatedRequest);
+            };
+        };
+    };
+    
+    public query func getVerificationRequests(
+        status: ?Text,
+        limit: Nat,
+        offset: Nat
+    ) : async [VerificationRequest] {
+        let allRequests = Iter.toArray(verificationRequests.vals());
+        
+        // Filter by status if provided
+        let filteredRequests = switch (status) {
+            case null { allRequests };
+            case (?s) {
+                Array.filter<VerificationRequest>(
+                    allRequests,
+                    func(req) { req.status == s }
+                );
+            };
+        };
+        
+        // Sort by submission date (newest first)
+        let sortedRequests = Array.sort<VerificationRequest>(
+            filteredRequests,
+            func(a, b) { Int.compare(b.submittedAt, a.submittedAt) }
+        );
+        
+        // Apply pagination
+        let start = if (offset >= sortedRequests.size()) { 0 } else { offset };
+        let end = if (start + limit > sortedRequests.size()) { sortedRequests.size() } else { start + limit };
+        
+        let paginatedRequests = Array.tabulate<VerificationRequest>(
+            end - start,
+            func(i) { sortedRequests[start + i] }
+        );
+        
+        return paginatedRequests;
+    };
+    
+    public query func getUserVerificationRequest(
+        userId: Principal
+    ) : async ?VerificationRequest {
+        let allRequests = Iter.toArray(verificationRequests.vals());
+        
+        let userRequest = Array.find<VerificationRequest>(
+            allRequests,
+            func(req) { req.userId == userId }
+        );
+        
+        return userRequest;
+    };
+    
+    // Helper function to generate unique IDs
+    private func generateId() : Text {
+        let timestamp = Int.toText(Int.abs(Time.now()));
+        let random = Int.toText(Int.abs(Time.now() % 1000));
+        return timestamp # "-" # random;
     };
 }
