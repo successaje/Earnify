@@ -1,7 +1,5 @@
 # Earnify - Decentralized Talent Marketplace on the Internet Computer
 
-![Earnify Logo](src/earnify_frontend/public/logo.png)
-
 ## Overview
 
 Earnify is a decentralized talent marketplace built on the Internet Computer Protocol (ICP) that connects skilled professionals with opportunities to earn, learn, and grow. Unlike traditional platforms, Earnify leverages blockchain technology to create a transparent, fair, and efficient ecosystem for talent discovery, job matching, bounty completion, hackathons and access to funding.
