@@ -11,7 +11,7 @@ const II_URL = network === 'ic'
   : 'http://be2us-64aaa-aaaaa-qaabq-cai.localhost:4943/'; // Local
 
 // Local canister ID - replace with your deployed canister ID
-const CANISTER_ID = 'a4tbr-q4aaa-aaaaa-qaafq-cai';
+const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
 // Production canister ID
 // const CANISTER_ID = '2pysh-dyaaa-aaaal-asd3a-cai';
 
@@ -351,15 +351,15 @@ export const createUser = async (userData) => {
 
     // Format social links according to the backend's expected structure
     // The entire socialLinks object needs to be wrapped as an optional value
-    const socialLinksObj = userData.socialLinks ? {
+    const socialLinks = userData.socialLinks ? [{
       linkedin: wrapOptText(userData.socialLinks.linkedin),
       twitter: wrapOptText(userData.socialLinks.twitter),
       github: wrapOptText(userData.socialLinks.github),
       portfolio: wrapOptText(userData.socialLinks.portfolio) 
-    } : null;
+    }] : null;
     
     // Wrap the entire socialLinks object as an optional value
-    const socialLinks = userData.socialLinks ? [socialLinksObj] : [];
+    // const socialLinks = userData.socialLinks ? [socialLinksObj] : [];
 
     // Format proof of work according to the backend's expected structure
     const proofOfWork = (userData.proofOfWork || []).map(pow => ({
