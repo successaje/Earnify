@@ -11,9 +11,9 @@ const II_URL = network === 'ic'
   : 'http://be2us-64aaa-aaaaa-qaabq-cai.localhost:4943/'; // Local
 
 // Local canister ID - replace with your deployed canister ID
-const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
+// const CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
 // Production canister ID
-// const CANISTER_ID = '2pysh-dyaaa-aaaal-asd3a-cai';
+const CANISTER_ID = '2pysh-dyaaa-aaaal-asd3a-cai';
 
 // Singleton instances
 let authClientInstance = null;
