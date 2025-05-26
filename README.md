@@ -135,7 +135,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Contact
 ----
-
+successaje7@gmail.com
 ---
 
 *Earnify - Where Talent Meets Opportunity on the Internet Computer*
